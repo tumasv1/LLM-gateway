@@ -1,0 +1,77 @@
+# ──────────────────────────────────────────────────────────────────────────
+# Каталог моделей и маршрутизация LiteLLM (bootstrap-конфиг).
+# В рантайме модели/ключи можно добавлять через UI/API (store_model_in_db: true) —
+# тогда правка этого файла не нужна. Файл = начальная загрузка при первом старте.
+#
+# ВАЖНО: процесс читает этот файл ОДИН раз при старте.
+#        после правки → `docker compose restart litellm` (не `up -d`).
+# ──────────────────────────────────────────────────────────────────────────
+
+model_list:
+  # ── gpt-4.1-mini: один логический model_name, ДВА источника → балансировка + fallback ──
+  - model_name: gpt-4.1-mini
+    litellm_params:
+      model: openai/gpt-4.1-mini
+      api_base: https://openrouter.ai/api/v1
+      api_key: os.environ/OPENROUTER_API_KEY
+      rpm: 200                              # лимит этого источника (для usage-based-routing)
+      input_cost_per_token: 0.0000004       # $0.40 / 1M (агрегаторов нет во встроенной таблице цен)
+      output_cost_per_token: 0.0000016      # $1.60 / 1M
+  - model_name: gpt-4.1-mini
+    litellm_params:
+      model: openai/gpt-4.1-mini
+      api_base: https://nano-gpt.com/api/v1
+      api_key: os.environ/NANOGPT_API_KEY
+      rpm: 200
+      input_cost_per_token: 0.0000004
+      output_cost_per_token: 0.0000016
+
+  # ── deepseek-chat: для агента openclaw. Добавь источники, которыми реально пользуешься ──
+  - model_name: deepseek-chat
+    litellm_params:
+      model: deepseek/deepseek-chat          # прямой DeepSeek API
+      api_key: os.environ/DEEPSEEK_API_KEY
+      rpm: 60
+  # второй источник той же модели (раскомментируй, если есть ключ) — даёт LB и обход лимита:
+  # - model_name: deepseek-chat
+  #   litellm_params:
+  #     model: openrouter/deepseek/deepseek-chat
+  #     api_key: os.environ/OPENROUTER_API_KEY
+  #     rpm: 200
+
+router_settings:
+  # выбирает источник с запасом по rpm/tpm (нужен Redis); так размазывается упор в лимит провайдера
+  routing_strategy: usage-based-routing-v2
+  redis_host: redis
+  redis_port: 6379
+  redis_password: os.environ/REDIS_PASSWORD
+
+  num_retries: 3            # повторов на одном источнике (с backoff, уважает Retry-After)
+  timeout: 120              # секунд на запрос
+  allowed_fails: 3          # после стольких сбоев источник уходит в cooldown
+  cooldown_time: 30         # на сколько секунд выводим упавший источник из ротации
+
+  # если ВСЕ источники модели недоступны/заняты — переключаемся на другую модель
+  fallbacks:
+    - gpt-4.1-mini: ["deepseek-chat"]
+    - deepseek-chat: ["gpt-4.1-mini"]
+  # переключение при переполнении контекста (пример; включи, когда добавишь модель с большим окном):
+  # context_window_fallbacks:
+  #   - gpt-4.1-mini: ["gpt-4.1"]
+
+litellm_settings:
+  drop_params: true         # тихо отбрасывать неподдерживаемые провайдером параметры
+  # кэш ответов в Redis (экономия токенов на повторах) — включить при желании:
+  # cache: true
+  # cache_params:
+  #   type: redis
+  #   host: redis
+  #   port: 6379
+  #   password: os.environ/REDIS_PASSWORD
+  # трейсинг всех вызовов в Langfuse — Этап 3 (раскомментировать, когда появятся LANGFUSE_* ключи):
+  # success_callback: ["langfuse"]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY  # админ + дефолтный доступ; клиентам раздаём virtual keys
+  database_url: os.environ/DATABASE_URL      # Postgres: ключи, бюджеты, история расходов
+  store_model_in_db: true                    # модели/ключи можно менять через UI/API без перезапуска
