@@ -1,43 +1,11 @@
 # ──────────────────────────────────────────────────────────────────────────
-# Каталог моделей и маршрутизация LiteLLM (bootstrap-конфиг).
-# В рантайме модели/ключи можно добавлять через UI/API (store_model_in_db: true) —
-# тогда правка этого файла не нужна. Файл = начальная загрузка при первом старте.
+# Конфиг LiteLLM — только настройки маршрутизации и общие параметры.
+# Модели управляются через UI/API (store_model_in_db: true) и хранятся в Postgres.
+# Этот файл НЕ содержит model_list — чтобы не было конфликта с UI-моделями.
 #
 # ВАЖНО: процесс читает этот файл ОДИН раз при старте.
 #        после правки → `docker compose restart litellm` (не `up -d`).
 # ──────────────────────────────────────────────────────────────────────────
-
-model_list:
-  # ── gpt-4.1-mini: один логический model_name, ДВА источника → балансировка + fallback ──
-  - model_name: gpt-4.1-mini
-    litellm_params:
-      model: openai/gpt-4.1-mini
-      api_base: https://openrouter.ai/api/v1
-      api_key: os.environ/OPENROUTER_API_KEY
-      rpm: 200                              # лимит этого источника (для usage-based-routing)
-      input_cost_per_token: 0.0000004       # $0.40 / 1M (агрегаторов нет во встроенной таблице цен)
-      output_cost_per_token: 0.0000016      # $1.60 / 1M
-  - model_name: gpt-4.1-mini
-    litellm_params:
-      model: openai/gpt-4.1-mini
-      api_base: https://nano-gpt.com/api/v1
-      api_key: os.environ/NANOGPT_API_KEY
-      rpm: 200
-      input_cost_per_token: 0.0000004
-      output_cost_per_token: 0.0000016
-
-  # ── deepseek-chat: для агента openclaw. Добавь источники, которыми реально пользуешься ──
-  - model_name: deepseek-chat
-    litellm_params:
-      model: deepseek/deepseek-chat          # прямой DeepSeek API
-      api_key: os.environ/DEEPSEEK_API_KEY
-      rpm: 60
-  # второй источник той же модели (раскомментируй, если есть ключ) — даёт LB и обход лимита:
-  # - model_name: deepseek-chat
-  #   litellm_params:
-  #     model: openrouter/deepseek/deepseek-chat
-  #     api_key: os.environ/OPENROUTER_API_KEY
-  #     rpm: 200
 
 router_settings:
   # выбирает источник с запасом по rpm/tpm (нужен Redis); так размазывается упор в лимит провайдера
@@ -51,10 +19,10 @@ router_settings:
   allowed_fails: 3          # после стольких сбоев источник уходит в cooldown
   cooldown_time: 30         # на сколько секунд выводим упавший источник из ротации
 
-  # если ВСЕ источники модели недоступны/заняты — переключаемся на другую модель
+  # если основной провайдер недоступен — переключаемся на резервный
   fallbacks:
-    - gpt-4.1-mini: ["deepseek-chat"]
-    - deepseek-chat: ["gpt-4.1-mini"]
+    - gpt-4.1-mini: ["gpt-4.1-mini-fallback"]       # OpenRouter упал → nano-gpt
+    - gpt-4.1-mini-fallback: ["gpt-4.1-mini"]        # и обратно
   # переключение при переполнении контекста (пример; включи, когда добавишь модель с большим окном):
   # context_window_fallbacks:
   #   - gpt-4.1-mini: ["gpt-4.1"]
