@@ -13,7 +13,7 @@ services:
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     volumes:
       - ./config/litellm_config.yaml:/app/config.yaml:ro
-    mem_limit: 1g          # 512m → OOM (exit 137) на старте LiteLLM
+    mem_limit: 1536m       # 512m/1g → OOM (exit 137) на старте LiteLLM; выросло после подключения Langfuse-коллбэка
     depends_on:
       postgres:
         condition: service_healthy
