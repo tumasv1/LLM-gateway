@@ -29,6 +29,7 @@ router_settings:
 
 litellm_settings:
   drop_params: true         # тихо отбрасывать неподдерживаемые провайдером параметры
+  callbacks: ["prometheus"] # включает счётчики в памяти, которые отдаёт /metrics (Этап 2 мониторинга)
   # кэш ответов в Redis (экономия токенов на повторах) — включить при желании:
   # cache: true
   # cache_params:
@@ -36,8 +37,11 @@ litellm_settings:
   #   host: redis
   #   port: 6379
   #   password: os.environ/REDIS_PASSWORD
-  # трейсинг всех вызовов в Langfuse — Этап 3 (раскомментировать, когда появятся LANGFUSE_* ключи):
-  # success_callback: ["langfuse"]
+  # трейсинг всех вызовов в Langfuse — читает LANGFUSE_HOST/PUBLIC_KEY/SECRET_KEY из .env
+  success_callback: ["langfuse"]
+  # автотеги на каждый трейс: алиас ключа (Ragv2/OpenClaw/...) — чтобы фильтровать
+  # трейсы по клиенту, включая будущих, без ручной настройки каждого ключа
+  langfuse_default_tags: ["user_api_key_alias", "cache_hit"]
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY  # админ + дефолтный доступ; клиентам раздаём virtual keys
