@@ -40,8 +40,13 @@ litellm_settings:
   # трейсинг всех вызовов в Langfuse — читает LANGFUSE_HOST/PUBLIC_KEY/SECRET_KEY из .env
   success_callback: ["langfuse"]
   # автотеги на каждый трейс: алиас ключа (Ragv2/OpenClaw/...) — чтобы фильтровать
-  # трейсы по клиенту, включая будущих, без ручной настройки каждого ключа
-  langfuse_default_tags: ["user_api_key_alias", "cache_hit"]
+  # трейсы по клиенту, включая будущих, без ручной настройки каждого ключа.
+  # cache_hit убран намеренно: кэш ответов сейчас выключен (см. cache ниже),
+  # поэтому тег всегда был "None"/"False" — чистый шум. Вернуть, когда включим cache.
+  langfuse_default_tags: ["user_api_key_alias"]
+  # НЕ вешать автотег "User-Agent: ..." на каждый трейс — с litellm 1.73.0 он
+  # добавляется по умолчанию и захламляет фильтр по тегам (сотни "User-Agent: OpenAI").
+  disable_add_user_agent_to_request_tags: true
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY  # админ + дефолтный доступ; клиентам раздаём virtual keys
