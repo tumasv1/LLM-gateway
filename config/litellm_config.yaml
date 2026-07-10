@@ -20,9 +20,17 @@ router_settings:
   cooldown_time: 30         # на сколько секунд выводим упавший источник из ротации
 
   # если основной провайдер недоступен — переключаемся на резервный
+  # deepseek-v4-flash-fallback (app.provod.ai) — аварийный провайдер без VPN из РФ.
+  # Стоит последним звеном у ВСЕХ моделей: если упадёт и основной, и его обычный
+  # резерв (например, отвалится VPN и станут недоступны OpenRouter/DeepSeek official),
+  # запрос всё равно уйдёт через provod.ai. Сам он никуда дальше не фолбэчит —
+  # это конечная точка отказоустойчивости.
   fallbacks:
-    - gpt-4.1-mini: ["gpt-4.1-mini-fallback"]       # OpenRouter упал → nano-gpt
-    - gpt-4.1-mini-fallback: ["gpt-4.1-mini"]        # и обратно
+    - gpt-4.1-mini: ["gpt-4.1-mini-fallback", "deepseek-v4-flash-fallback"]   # OpenRouter → nano-gpt → provod.ai
+    - gpt-4.1-mini-fallback: ["gpt-4.1-mini", "deepseek-v4-flash-fallback"]   # nano-gpt → OpenRouter → provod.ai
+    - deepseek-v4-flash: ["deepseek-v4-flash-fallback"]                       # DeepSeek official → provod.ai
+    - deepseek-v4-flash-thinking: ["deepseek-v4-flash-fallback"]
+    - deepseek-v4-pro: ["deepseek-v4-flash-fallback"]
   # переключение при переполнении контекста (пример; включи, когда добавишь модель с большим окном):
   # context_window_fallbacks:
   #   - gpt-4.1-mini: ["gpt-4.1"]
