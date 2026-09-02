@@ -25,12 +25,24 @@ router_settings:
   # резерв (например, отвалится VPN и станут недоступны OpenRouter/DeepSeek official),
   # запрос всё равно уйдёт через provod.ai. Сам он никуда дальше не фолбэчит —
   # это конечная точка отказоустойчивости.
+  #
+  # ЭТОТ БЛОК ИГНОРИРУЕТСЯ, пока в таблице Postgres LiteLLM_Config есть строка
+  # param_name='router_settings' — она полностью подменяет router_settings из
+  # этого файла при каждом старте процесса, включая fallbacks (ключ заменяется
+  # целиком, а не мёржится). Редактируется через UI → Router Settings, без
+  # перезапуска контейнера. Ниже — просто зеркало последнего известного
+  # DB-состояния, нужное как отправная точка при восстановлении БД с нуля.
+  # Проверить живое значение:
+  #   docker exec -e PGPASSWORD=... <postgres-container> psql -U litellm -d litellm \
+  #     -c "SELECT param_value FROM \"LiteLLM_Config\" WHERE param_name='router_settings';"
   fallbacks:
     - gpt-4.1-mini: ["gpt-4.1-mini-fallback", "deepseek-v4-flash-fallback"]   # OpenRouter → nano-gpt → provod.ai
     - gpt-4.1-mini-fallback: ["gpt-4.1-mini", "deepseek-v4-flash-fallback"]   # nano-gpt → OpenRouter → provod.ai
     - deepseek-v4-flash: ["deepseek-v4-flash-fallback"]                       # DeepSeek official → provod.ai
     - deepseek-v4-flash-thinking: ["deepseek-v4-flash-fallback"]
-    - deepseek-v4-pro: ["deepseek-v4-flash-fallback"]
+    - deepseek-v4-pro: ["deepseek-v4-pro-platformdeepseek", "deepseek-v4-flash-fallback"]                 # OpenRouter → DeepSeek official → provod.ai
+    - deepseek-v4-pro-platformdeepseek: ["deepseek-v4-pro", "deepseek-v4-flash-fallback"]                 # DeepSeek official → OpenRouter → provod.ai
+    - deepseek-v4-flash-latest: ["deepseek-v4-flash-fallback"]                                            # OpenRouter → provod.ai
   # переключение при переполнении контекста (пример; включи, когда добавишь модель с большим окном):
   # context_window_fallbacks:
   #   - gpt-4.1-mini: ["gpt-4.1"]
