@@ -51,6 +51,7 @@
 ## Команды
 
 ```bash
+ssh root@192.168.3.203 "cd /opt/LLM-gateway && git pull"   # обновить прод из origin/main (SSH deploy key, read-only)
 docker compose up -d              # поднять стек
 docker compose restart litellm    # перечитать config/litellm_config.yaml (ВАЖНО: см. gotcha)
 docker compose logs -f litellm    # логи
@@ -59,6 +60,8 @@ scripts/create_project_key.sh <alias> <model> <budget$> [rpm]   # завести
 scripts/backup_db.sh              # бэкап Postgres (ключи + история); уже стоит в cron 03:00
 ```
 UI: `http://192.168.3.203:4000/ui` (логин `admin`, пароль = `LITELLM_MASTER_KEY`).
+
+Деплой кода на прод — `git pull` на LXC (см. выше), не `scp`. Репозиторий приватный, доступ через SSH deploy key (`~/.ssh/llm_gateway_deploy_key` на LXC, `read_only: true`, id `162053622` в Settings → Deploy keys) — приватный ключ никогда не покидает сервер. Remote переключён на SSH-алиас `github.com-llm-gateway` (см. `~/.ssh/config` на LXC). После `git pull`, изменивший `config/litellm_config.yaml`, — рестарт нужен только если менялись `litellm_settings`/`general_settings` или ты специально хочешь синхронизировать `router_settings` с файлом (обычно не нужно — см. gotcha про приоритет DB).
 
 ## Проверка восстановления из бэкапа
 
