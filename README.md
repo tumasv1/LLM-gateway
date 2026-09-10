@@ -8,7 +8,7 @@
 
 | Сервис | Зачем |
 |--------|-------|
-| litellm | сам шлюз (порт 4000, UI на `/ui`) |
+| litellm | сам шлюз (порт 4000, UI на `/ui`); образ пиним на `ghcr.io/berriai/litellm:v1.100.0`, не `:latest` / `:main-stable` |
 | postgres | virtual keys, бюджеты, история расходов |
 | redis | счётчики rpm/tpm для балансировки + кэш |
 

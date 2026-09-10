@@ -34,7 +34,7 @@
                                 └─ Redis    : счётчики rpm/tpm (load balancing) + кэш
 ```
 
-- **litellm** — сам шлюз (`ghcr.io/berriai/litellm:main-stable`), порт 4000.
+- **litellm** — сам шлюз (`ghcr.io/berriai/litellm:v1.100.0` в `docker-compose.yml`), порт 4000. Образ **пиним на semver**, не на rolling-теги `:main-stable` / `:latest` (первый deprecated, второй может уехать между деплоями).
 - **postgres** — платформенные данные (ключи/бюджеты/`LiteLLM_SpendLogs`). **Бэкапить** (`scripts/backup_db.sh`).
 - **redis** — общие счётчики для `usage-based-routing-v2` и кэш ответов.
 
@@ -61,7 +61,7 @@ scripts/backup_db.sh              # бэкап Postgres (ключи + истор
 ```
 UI: `http://192.168.3.203:4000/ui` (логин `admin`, пароль = `LITELLM_MASTER_KEY`).
 
-Деплой кода на прод — `git pull` на LXC (см. выше), не `scp`. Репозиторий приватный, доступ через SSH deploy key (`~/.ssh/llm_gateway_deploy_key` на LXC, `read_only: true`, id `162053622` в Settings → Deploy keys) — приватный ключ никогда не покидает сервер. Remote переключён на SSH-алиас `github.com-llm-gateway` (см. `~/.ssh/config` на LXC). После `git pull`, изменивший `config/litellm_config.yaml`, — рестарт нужен только если менялись `litellm_settings`/`general_settings` или ты специально хочешь синхронизировать `router_settings` с файлом (обычно не нужно — см. gotcha про приоритет DB).
+Деплой кода на прод — `git pull` на LXC (см. выше), не `scp`. Репозиторий приватный, доступ через SSH deploy key (`~/.ssh/llm_gateway_deploy_key` на LXC, `read_only: true`, id `162053622` в Settings → Deploy keys) — приватный ключ никогда не покидает сервер. Remote переключён на SSH-алиас `github.com-llm-gateway` (см. `~/.ssh/config` на LXC). После `git pull`, изменивший `config/litellm_config.yaml`, — рестарт нужен только если менялись `litellm_settings`/`general_settings` или ты специально хочешь синхронизировать `router_settings` с файлом (обычно не нужно — см. gotcha про приоритет DB). Смена тега образа в `docker-compose.yml` — это не рестарт, а `docker compose pull litellm && docker compose up -d` (контейнер пересоздастся с новым образом; Prisma-миграции бегут при старте).
 
 ## Проверка восстановления из бэкапа
 
@@ -85,7 +85,9 @@ docker rm -f pg-restore-test
 
 ## Gotchas (важные грабли)
 
+- **Образ LiteLLM пинить на `vX.Y.Z`, не на `:main-stable` / `:latest`.** Rolling-тег на проде застывает, пока не сделаешь `docker compose pull`; `:main-stable` к тому же deprecated. Смена версии = правка тега в `docker-compose.yml` → `git pull` на LXC → `docker compose pull litellm && docker compose up -d`. Перед recreate — `scripts/backup_db.sh` (Prisma на старте может накатить миграции).
 - **Конфиг читается ОДИН раз при старте процесса.** Правка `config/litellm_config.yaml` требует `docker compose restart litellm`. `docker compose up -d` при изменении только примонтированного файла **НЕ пересоздаёт** контейнер → процесс держит старый конфиг. (Проверено: с правкой ключа `up -d` не подхватывал, помогал только `restart`/`--force-recreate`.)
+- **`enforce_fallback_model_access` не включать**, пока в virtual keys явно не прописаны резервные модели (`gpt-4.1-mini-fallback`, `deepseek-v4-flash-fallback`). По умолчанию fallback обходит `models=` на ключе — так и задумана наша цепочка OpenRouter → nano-gpt → provod.ai.
 - **`router_settings` из UI (Router Settings) имеет приоритет над файлом — НАВСЕГДА, не только до рестарта.** Как только через UI отредактировали Router Settings (например fallbacks), значение целиком (ключ заменяется, не мёржится) оседает в Postgres — таблица `LiteLLM_Config`, `param_name='router_settings'` — и подставляется вместо `router_settings` из `config/litellm_config.yaml` при КАЖДОМ следующем старте процесса, включая `restart`. Блок `fallbacks:` в файле после этого — просто заметка/отправная точка для disaster recovery, а не источник истины. Смотреть живое значение: `docker exec -e PGPASSWORD=... <postgres-container> psql -U litellm -d litellm -c "SELECT param_value FROM \"LiteLLM_Config\" WHERE param_name='router_settings';"`. Менять программно — `POST /config/update` с телом `{"router_settings": {...}}` (полная замена значения, включая поля вроде `num_retries`/`cooldown_time`, которые не хотите потерять). Та же логика в принципе применима к `litellm_settings` (например Logging-настройки в UI) — если их когда-нибудь тронут через UI, тоже осядут в БД и файл перестанет быть источником истины и для них.
 - **mem_limit: 1g.** При 512m LiteLLM падает с OOM (exit 137) ещё на старте.
 - **store_model_in_db: true** — модели/ключи, добавленные через UI, лежат в Postgres, а не в файле. Файл — только начальная загрузка.
