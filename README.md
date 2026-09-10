@@ -31,7 +31,7 @@ curl http://localhost:4000/health/liveliness     # "I'm alive!"
 
 ## Каталог моделей
 
-Описан в [`config/litellm_config.yaml`](config/litellm_config.yaml). Сейчас: `gpt-4.1-mini` (OpenRouter + nano-gpt, балансировка), `deepseek-chat` (DeepSeek). Новые модели/ключи можно добавлять через UI/API без правки файла (`store_model_in_db: true`).
+Каталог живёт в Postgres (UI/API, `store_model_in_db: true`), не в файле. Сейчас: `gpt-4.1-mini` / `gpt-4.1-mini-fallback`, `deepseek/deepseek-flash`, `deepseek-v4-flash-latest`, `deepseek-v4-pro`, `openrouter/xiaomi/mimo-v2.5`, аварийный `deepseek-v4-flash-fallback`. Зеркало fallbacks для disaster recovery — в [`config/litellm_config.yaml`](config/litellm_config.yaml).
 
 > ⚠️ После правки `config/litellm_config.yaml` нужен `docker compose restart litellm` — конфиг читается только при старте процесса. См. раздел Gotchas в [CLAUDE.md](CLAUDE.md).
 

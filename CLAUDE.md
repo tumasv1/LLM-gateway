@@ -17,10 +17,10 @@
 ## Текущий статус (развёрнуто и проверено)
 
 - ✅ Стек поднят на LXC, все 3 контейнера healthy. RAM по факту: litellm ~0.85–0.9 ГБ, postgres ~40 МБ, redis ~10 МБ → **~0.95 ГБ суммарно**.
-- ✅ Каталог моделей управляется через UI (не файл): `gpt-4.1-mini` (OpenRouter, основной), `gpt-4.1-mini-fallback` (nano-gpt, резервный), `deepseek-chat` (ключ-заглушка).
+- ✅ Каталог моделей управляется через UI (не файл): `gpt-4.1-mini` (OpenRouter), `gpt-4.1-mini-fallback` (nano-gpt), `deepseek/deepseek-flash` (DeepSeek official), `deepseek-v4-flash-latest` (OpenRouter), `deepseek-v4-pro`, `openrouter/xiaomi/mimo-v2.5`, `deepseek-v4-flash-fallback` (provod.ai, аварийный).
 - ✅ Ключи провайдеров обновлены (старые засветились в чате).
 - ✅ Fallback проверен: при недоступности OpenRouter запросы к `gpt-4.1-mini` автоматически уходят в nano-gpt (`gpt-4.1-mini-fallback`), клиент не замечает.
-- ✅ Мультитенантность проверена: virtual key с `models=[gpt-4.1-mini]` получает отказ при попытке к `deepseek-chat`.
+- ✅ Мультитенантность проверена: virtual key с `models=[gpt-4.1-mini]` получает отказ при попытке к модели вне списка.
 - ✅ Бэкапы: cron root ежедневно 03:00 → `backups/`, ротация 14, лог `/var/log/llm-gw-backup.log`. **Восстановление протестировано**.
 - ✅ RAGv2 переключён на шлюз (`http://192.168.3.203:4000/v1`, virtual key `ragv2`). Будущие клиенты: openclaw/DeepSeek-агент, боты, n8n.
 - ✅ Трейсинг в Langfuse подключён (`success_callback: ["langfuse"]` в `config/litellm_config.yaml`) — активируется, когда в `.env` появятся реальные `LANGFUSE_HOST/PUBLIC_KEY/SECRET_KEY` от развёрнутого self-hosted Langfuse (отдельный проект `../Langfuse`, свой LXC).
@@ -44,7 +44,7 @@
 - **Каталог моделей управляется через UI** (`store_model_in_db: true`). `config/litellm_config.yaml` содержит только `router_settings`, `litellm_settings`, `general_settings` — без `model_list`. Модели добавляются/редактируются в UI без перезапуска.
 - **Именование deployment-ов**: `model_name` = имя для клиентов (`gpt-4.1-mini`); `LiteLLM Model Name` = внутренний роутинг. Для OpenRouter использовать `openrouter/openai/gpt-4.1-mini` (api_base не нужен — LiteLLM знает адрес). Для кастомных провайдеров (nano-gpt) — Provider `openai` + `api_base = https://nano-gpt.com/api/v1` + `openai/gpt-4.1-mini`.
 - **Схема надёжности gpt-4.1-mini**: один основной deployment (OpenRouter) + отдельная модель-резерв `gpt-4.1-mini-fallback` (nano-gpt). Fallback прописан в `config/litellm_config.yaml`. При сбое OpenRouter LiteLLM делает `num_retries=3`, затем переключается на nano-gpt. После `cooldown_time=30с` снова пробует OpenRouter. `routing_strategy: usage-based-routing-v2` остаётся в конфиге — пригодится, если в группу добавится второй deployment.
-- **`deepseek-v4-flash-fallback` (app.provod.ai) — общий аварийный фолбэк**: работает в РФ без VPN. Прописан последним звеном в fallback-цепочке у всех моделей (`gpt-4.1-mini`, `gpt-4.1-mini-fallback`, `deepseek-v4-flash`, `deepseek-v4-flash-thinking`, `deepseek-v4-pro`) — если сломается VPN и станут недоступны OpenRouter/DeepSeek official, трафик уйдёт сюда. Сам по себе не используется напрямую, дальше никуда не фолбэчит (конечная точка).
+- **`deepseek-v4-flash-fallback` (app.provod.ai) — общий аварийный фолбэк**: работает в РФ без VPN. Прописан последним звеном в fallback-цепочке у `gpt-4.1-mini`, `gpt-4.1-mini-fallback`, `deepseek/deepseek-flash`, `deepseek-v4-flash-latest` — если сломается VPN и станут недоступны OpenRouter/DeepSeek official, трафик уйдёт сюда. Сам по себе не используется напрямую, дальше никуда не фолбэчит (конечная точка). У `deepseek-v4-pro` и `openrouter/xiaomi/mimo-v2.5` fallback в Router Settings сейчас не задан.
 - **Различать провайдеров в логах**: смотреть колонку `api_base` в `LiteLLM_SpendLogs` — там видно кто реально ответил (openrouter.ai vs nano-gpt.com).
 - **LAN-only**: LXC без публичного IP; при необходимости внешнего доступа — только через существующий reverse-proxy (nginx) с TLS, не публикуя 4000 напрямую.
 
