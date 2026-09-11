@@ -46,7 +46,7 @@ router_settings:
 
 litellm_settings:
   drop_params: true         # тихо отбрасывать неподдерживаемые провайдером параметры
-  callbacks: ["prometheus"] # включает счётчики в памяти, которые отдаёт /metrics (Этап 2 мониторинга)
+  callbacks: ["prometheus", "openwebui_presidio.proxy_handler_instance"] # prometheus + OSS-привязка Presidio к ключу OpenWebUI-2
   # кэш ответов в Redis (экономия токенов на повторах) — включить при желании:
   # cache: true
   # cache_params:
