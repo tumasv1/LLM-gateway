@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from presidio_analyzer import Pattern, PatternRecognizer, RecognizerResult
+from presidio_analyzer.predefined_recognizers import SpacyRecognizer
 
 from ru_pdn.checksums import (
     inn_valid,
@@ -124,6 +125,7 @@ class RuFioRecognizer(PatternRecognizer):
     """
 
     def __init__(self, supported_language: str = "en"):
+        # (?-i): в registry стоит IGNORECASE, без этого «зовут» станет «именем».
         name = r"[А-ЯЁ][а-яё]{1,30}(?:-[А-ЯЁ][а-яё]{1,30})?"
         patronymic = (
             r"[А-ЯЁ][а-яё]{1,20}(?:ович|евич|ич|овна|евна|ична|ычна|ьич)"
@@ -131,12 +133,12 @@ class RuFioRecognizer(PatternRecognizer):
         patterns = [
             Pattern(
                 "fio_patronymic",
-                rf"\b{name}\s+{name}\s+{patronymic}\b",
+                rf"(?-i)\b{name}\s+{name}\s+{patronymic}\b",
                 0.9,
             ),
             Pattern(
                 "fio_two_or_three",
-                rf"\b{name}\s+{name}(?:\s+{name})?\b",
+                rf"(?-i)\b{name}\s+{name}(?:\s+{name})?\b",
                 0.35,
             ),
         ]
@@ -161,9 +163,43 @@ class RuFioRecognizer(PatternRecognizer):
         return kept
 
 
+def _cyrillic_ratio(text: str) -> float:
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return 0.0
+    cyr = sum(1 for c in letters if "А" <= c <= "я" or c in "Ёё")
+    return cyr / len(letters)
+
+
+class EnSpacySkipCyrillicPerson(SpacyRecognizer):
+    """en_core_web_lg врёт PERSON на кириллице («Вчера Иван Иванов»).
+
+    Русские ФИО отдаём RuFioRecognizer; латинские PERSON оставляем.
+    """
+
+    def analyze(self, text, entities, nlp_artifacts=None):
+        results = super().analyze(text, entities, nlp_artifacts)
+        kept: list[RecognizerResult] = []
+        for item in results:
+            if item.entity_type == "PERSON":
+                span = text[item.start : item.end]
+                if _cyrillic_ratio(span) >= 0.5:
+                    continue
+            kept.append(item)
+        return kept
+
+
 def register_ru_recognizers(engine) -> None:
     """Повесить RU-recognizers на language=en — так их видит LiteLLM."""
     registry = engine.registry
+    # подменить spaCy, чтобы не маскировать любую кириллицу как PERSON
+    registry.recognizers = [
+        rec
+        for rec in list(registry.recognizers)
+        if not isinstance(rec, SpacyRecognizer)
+    ]
+    registry.add_recognizer(EnSpacySkipCyrillicPerson(supported_language="en"))
+
     existing = {r.name for r in registry.recognizers}
     for cls in (
         RuInnRecognizer,

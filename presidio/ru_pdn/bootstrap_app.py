@@ -10,7 +10,7 @@ _orig_init = presidio_app.Server.__init__
 def _patched_init(self, *args, **kwargs):
     _orig_init(self, *args, **kwargs)
     register_ru_recognizers(self.engine)
-    self.logger.info("ru_pdn: подключены ИНН/СНИЛС/паспорт/ФИО (en+ru)")
+    self.logger.info("ru_pdn: подключены ИНН/СНИЛС/паспорт/ФИО (language=en)")
 
 
 presidio_app.Server.__init__ = _patched_init
