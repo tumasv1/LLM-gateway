@@ -61,7 +61,11 @@ curl -s -X POST http://<lxc-ip>:4000/key/generate \
    (подключён в `litellm_settings.callbacks`) подставляет `guardrails: ["presidio-pii"]`
    в запрос, только если `key_alias == OpenWebUI-2`. Это тот же OSS-путь, что
    «передать guardrails в body», без участия клиента.
-3. После правки хука или `callbacks` — `docker compose restart litellm`.
+   3. После правки хука, `callbacks` **или состава сущностей guardrail** —
+      `docker compose restart litellm`. Смена `pii_entities_config` через
+      `PUT /guardrails/{id}` в v1.100.0 пишет БД, но in-memory sync часто падает
+      (`vars() argument must have __dict__`) — без рестарта процесс продолжает
+      слать в Analyzer старый список типов.
 
 Опционально в OpenWebUI: Connections → LiteLLM → `passthrough_params.guardrails = ["presidio-pii"]`
 (дубль на стороне клиента; шлюз и так маскирует по алиасу ключа).
