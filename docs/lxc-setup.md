@@ -25,6 +25,7 @@ git clone <твой-репозиторий> LLM-gateway   # или rsync с ра
 cd LLM-gateway
 cp .env.example .env
 nano .env                                  # заполнить ключи провайдеров, пароли, master key
+docker compose build presidio-analyzer     # слой RU-recognizers поверх официального образа
 docker compose up -d
 docker compose ps                          # все healthy?
 ```

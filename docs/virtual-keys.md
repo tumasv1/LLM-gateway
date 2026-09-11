@@ -53,7 +53,10 @@ curl -s -X POST http://<lxc-ip>:4000/key/generate \
 1. UI → **Guardrails → Add Guardrail → Presidio PII**. Имя `presidio-pii`.
    Analyzer `http://presidio-analyzer:3000`, Anonymizer `http://presidio-anonymizer:3000`.
    Mode `pre_call`. **Default On = выкл.** `output_parse_pii` не включать.
-   Сущности: EMAIL_ADDRESS / PHONE_NUMBER / PERSON → MASK.
+   Сущности → MASK: EMAIL_ADDRESS, PHONE_NUMBER, PERSON,
+   **INN_RU, SNILS_RU, PASSPORT_RF** (шаг 2: без них LiteLLM не попросит
+   Analyzer искать кастомные типы). PERSON закрывает ФИО (отчество или контекст
+   «фио/зовут/фамилия»). ИНН/СНИЛС — только с контрольной суммой.
 2. **Не** вешать guardrail на ключ в UI/API. Хук `hooks/openwebui_presidio.py`
    (подключён в `litellm_settings.callbacks`) подставляет `guardrails: ["presidio-pii"]`
    в запрос, только если `key_alias == OpenWebUI-2`. Это тот же OSS-путь, что

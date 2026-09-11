@@ -17,7 +17,7 @@
 ## Текущий статус (развёрнуто и проверено)
 
 - ✅ Стек поднят на LXC, контейнеры healthy. RAM по факту: litellm ~0.9 ГБ, postgres ~40 МБ, redis ~3 МБ, presidio-analyzer ~0.3 ГБ, anonymizer ~30 МБ.
-- ✅ Шаг 1 маскирования ПДн: Presidio в compose; UI-guardrail `presidio-pii` (`pre_call`, default_on выкл, без restore); только ключ **OpenWebUI-2** через хук `hooks/openwebui_presidio.py` (Policies/`metadata.guardrails` на ключе в OSS — 403).
+- ✅ Шаг 1–2 маскирования ПДн: Presidio в compose; RU-recognizers (ИНН/СНИЛС/паспорт/ФИО) в `presidio/`; UI-guardrail `presidio-pii` (`pre_call`, default_on выкл, без restore, сущности включая INN_RU/SNILS_RU/PASSPORT_RF); только ключ **OpenWebUI-2** через хук `hooks/openwebui_presidio.py` (Policies/`metadata.guardrails` на ключе в OSS — 403).
 - ✅ Каталог моделей управляется через UI (не файл): `gpt-4.1-mini` (OpenRouter), `gpt-4.1-mini-fallback` (nano-gpt), `deepseek/deepseek-flash` (DeepSeek official), `deepseek-v4-flash-latest` (OpenRouter), `deepseek-v4-pro`, `openrouter/xiaomi/mimo-v2.5`, `deepseek-v4-flash-fallback` (provod.ai, аварийный).
 - ✅ Ключи провайдеров обновлены (старые засветились в чате).
 - ✅ Fallback проверен: при недоступности OpenRouter запросы к `gpt-4.1-mini` автоматически уходят в nano-gpt (`gpt-4.1-mini-fallback`), клиент не замечает.

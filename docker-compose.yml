@@ -69,8 +69,11 @@ services:
   # Порты наружу НЕ публикуем — только docker-сеть. Политика (какой ключ
   # маскировать) живёт в UI/Postgres, не в YAML.
   presidio-analyzer:
-    # GHCR, не mcr.microsoft.com (там :latest больше не обновляется).
-    image: ghcr.io/data-privacy-stack/presidio-analyzer:2.2.364
+    # База GHCR + слой RU-recognizers (ИНН/СНИЛС/паспорт/ФИО). Сборка на месте.
+    build:
+      context: ./presidio
+      dockerfile: Dockerfile
+    image: llm-gateway/presidio-analyzer-ru:2.2.364
     restart: unless-stopped
     mem_limit: 1536m       # spaCy en_core_web_* на старте жрёт гигабайт+
     healthcheck:
