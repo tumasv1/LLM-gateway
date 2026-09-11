@@ -112,7 +112,11 @@ class RuPassportRecognizer(PatternRecognizer):
         results = super().analyze(text, entities, nlp_artifacts)
         kept: list[RecognizerResult] = []
         for item in results:
-            if _has_any(_window(text, item.start, item.end), PASSPORT_CONTEXT):
+            digits = only_digits(text[item.start : item.end])
+            # 10 цифр с валидной КС ИНН — это ИНН, не бланк паспорта
+            if inn_valid(digits):
+                continue
+            if _has_any(_window(text, item.start, item.end, size=24), PASSPORT_CONTEXT):
                 kept.append(item)
         return kept
 
