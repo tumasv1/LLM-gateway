@@ -21,6 +21,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      presidio-analyzer:
+        condition: service_healthy
+      presidio-anonymizer:
+        condition: service_healthy
     healthcheck:
       # в образе нет curl — проверяем питоном, он точно есть
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]
@@ -58,6 +62,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Presidio: детектор и маскировщик ПДн для LiteLLM Guardrails.
+  # Порты наружу НЕ публикуем — только docker-сеть. Политика (какой ключ
+  # маскировать) живёт в UI/Postgres, не в YAML.
+  presidio-analyzer:
+    # GHCR, не mcr.microsoft.com (там :latest больше не обновляется).
+    image: ghcr.io/data-privacy-stack/presidio-analyzer:2.2.364
+    restart: unless-stopped
+    mem_limit: 1536m       # spaCy en_core_web_* на старте жрёт гигабайт+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s    # модель NER поднимается не мгновенно
+
+  presidio-anonymizer:
+    image: ghcr.io/data-privacy-stack/presidio-anonymizer:2.2.364
+    restart: unless-stopped
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
   pg_data:

@@ -42,6 +42,22 @@ curl -s -X POST http://<lxc-ip>:4000/key/generate \
 
 Или в UI: **Virtual Keys → Create New Key**.
 
+## Маскирование ПДн на одном ключе (OSS)
+
+В LiteLLM v1.100.0 поле `guardrails` на `/key/update` помечено как Enterprise.
+Рабочий OSS-способ: **не** Policies и **не** `default_on` (это включит маску всем).
+
+1. UI → **Guardrails → Add Guardrail → Presidio PII**. Имя `presidio-pii`.
+   Analyzer `http://presidio-analyzer:3000`, Anonymizer `http://presidio-anonymizer:3000`.
+   Mode `pre_call`. **Default On = выкл.** `output_parse_pii` не включать.
+   Сущности: EMAIL_ADDRESS / PHONE_NUMBER / PERSON → MASK.
+2. UI → **Virtual Keys → нужный ключ → Edit**. В JSON metadata добавить
+   `"guardrails": ["presidio-pii"]` (остальные поля metadata сохранить).
+   Через API то же самое: `POST /key/update` с `key_alias` и **полным**
+   `metadata` (мерж, не top-level `"guardrails": ...` — иначе premium-check).
+
+Сейчас так включено только у алиаса `OpenWebUI-2`.
+
 ## Как клиент использует ключ
 
 ```python
