@@ -5,7 +5,7 @@
 ## 1. Создать LXC на Proxmox
 
 - Шаблон: **Debian 12** (или Ubuntu 22.04/24.04).
-- Ресурсы: **2 vCPU, 2 ГБ RAM, 8 ГБ диск** (LiteLLM ~0.85 ГБ + Postgres + Redis ≈ 1 ГБ, остальное — запас).
+- Ресурсы: **2 vCPU, 4 ГБ RAM, 8 ГБ диск** (LiteLLM ~0.85 ГБ + Postgres + Redis ≈ 1 ГБ + Presidio Analyzer ~1–1.5 ГБ). На 2 ГБ Analyzer не влезет.
 - Сеть: статический IP в LAN (напр. `192.168.3.x`), без проброса наружу.
 - **Включить nesting** (для Docker внутри LXC): в Proxmox → Options → Features → отметить `nesting=1` (и `keyctl=1`). Без этого Docker в LXC не запустится.
 
