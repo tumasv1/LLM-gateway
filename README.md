@@ -11,12 +11,13 @@
 | litellm | сам шлюз (порт 4000, UI на `/ui`); образ пиним на `ghcr.io/berriai/litellm:v1.100.0`, не `:latest` / `:main-stable` |
 | postgres | virtual keys, бюджеты, история расходов |
 | redis | счётчики rpm/tpm для балансировки + кэш |
-| presidio-analyzer / anonymizer | детектор и необратимая маска ПДн (Guardrails). Порты наружу не публикуются. Политика — в UI, не в YAML |
+| presidio-analyzer / anonymizer | детектор и необратимая маска ПДн. Analyzer собирается из `presidio/Dockerfile` (официальный 2.2.364 + RU-recognizers). Порты наружу не публикуются. Политика — в UI |
 
 ## Быстрый старт (локально / в LXC)
 
 ```bash
 cp .env.example .env          # заполнить ключи провайдеров, пароли, master key
+docker compose build presidio-analyzer
 docker compose up -d
 curl http://localhost:4000/health/liveliness     # "I'm alive!"
 ```

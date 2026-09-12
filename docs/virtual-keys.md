@@ -53,12 +53,19 @@ curl -s -X POST http://<lxc-ip>:4000/key/generate \
 1. UI → **Guardrails → Add Guardrail → Presidio PII**. Имя `presidio-pii`.
    Analyzer `http://presidio-analyzer:3000`, Anonymizer `http://presidio-anonymizer:3000`.
    Mode `pre_call`. **Default On = выкл.** `output_parse_pii` не включать.
-   Сущности: EMAIL_ADDRESS / PHONE_NUMBER / PERSON → MASK.
+   Сущности → MASK: EMAIL_ADDRESS, PHONE_NUMBER, PERSON,
+   **INN_RU, SNILS_RU, PASSPORT_RF** (шаг 2: без них LiteLLM не попросит
+   Analyzer искать кастомные типы). PERSON закрывает ФИО (отчество или контекст
+   «фио/зовут/фамилия»). ИНН/СНИЛС — только с контрольной суммой.
 2. **Не** вешать guardrail на ключ в UI/API. Хук `hooks/openwebui_presidio.py`
    (подключён в `litellm_settings.callbacks`) подставляет `guardrails: ["presidio-pii"]`
    в запрос, только если `key_alias == OpenWebUI-2`. Это тот же OSS-путь, что
    «передать guardrails в body», без участия клиента.
-3. После правки хука или `callbacks` — `docker compose restart litellm`.
+   3. После правки хука, `callbacks` **или состава сущностей guardrail** —
+      `docker compose restart litellm`. Смена `pii_entities_config` через
+      `PUT /guardrails/{id}` в v1.100.0 пишет БД, но in-memory sync часто падает
+      (`vars() argument must have __dict__`) — без рестарта процесс продолжает
+      слать в Analyzer старый список типов.
 
 Опционально в OpenWebUI: Connections → LiteLLM → `passthrough_params.guardrails = ["presidio-pii"]`
 (дубль на стороне клиента; шлюз и так маскирует по алиасу ключа).
