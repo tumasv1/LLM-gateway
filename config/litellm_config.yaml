@@ -4,7 +4,9 @@
 # Этот файл НЕ содержит model_list — чтобы не было конфликта с UI-моделями.
 #
 # ВАЖНО: процесс читает этот файл ОДИН раз при старте.
-#        после правки → `docker compose restart litellm` (не `up -d`).
+#        после правки yaml → `docker compose restart litellm`.
+#        после правки .env (ключи Langfuse) → `docker compose up -d litellm`
+#        (`restart` оставляет старый env в контейнере).
 # ──────────────────────────────────────────────────────────────────────────
 
 router_settings:
@@ -46,16 +48,15 @@ router_settings:
 
 litellm_settings:
   drop_params: true         # тихо отбрасывать неподдерживаемые провайдером параметры
-  callbacks: ["prometheus", "openwebui_presidio.proxy_handler_instance"] # prometheus + OSS-привязка Presidio к ключу OpenWebUI-2
-  # кэш ответов в Redis (экономия токенов на повторах) — включить при желании:
-  # cache: true
-  # cache_params:
-  #   type: redis
-  #   host: redis
-  #   port: 6379
-  #   password: os.environ/REDIS_PASSWORD
-  # трейсинг всех вызовов в Langfuse — читает LANGFUSE_HOST/PUBLIC_KEY/SECRET_KEY из .env
-  success_callback: ["langfuse"]
+  # трейсинг всех вызовов в Langfuse v3/v4 через OTLP (не legacy SDK 2.x).
+  # OTEL: {LANGFUSE_HOST}/api/public/otel, ключи LANGFUSE_PUBLIC_KEY/SECRET_KEY из .env.
+  # После правки yaml — restart; после смены ключей в .env — up -d.
+  callbacks:
+    - prometheus
+    - openwebui_presidio.proxy_handler_instance
+    - langfuse_key_alias_tag.proxy_handler_instance  # тег user_api_key_alias для OTEL (см. хук)
+    - langfuse_otel
+  # кэш ответов в Redis — выключен; если включишь, можно вернуть тег cache_hit в langfuse_default_tags.
   # автотеги на каждый трейс: алиас ключа (Ragv2/OpenClaw/...) — чтобы фильтровать
   # трейсы по клиенту, включая будущих, без ручной настройки каждого ключа.
   # cache_hit убран намеренно: кэш ответов сейчас выключен (см. cache ниже),

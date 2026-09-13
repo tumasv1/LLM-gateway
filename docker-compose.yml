@@ -17,6 +17,7 @@ services:
       - ./config/litellm_config.yaml:/app/config.yaml:ro
       # OSS-обход per-key: Enterprise metadata.guardrails даёт 403, см. хук
       - ./hooks/openwebui_presidio.py:/app/openwebui_presidio.py:ro
+      - ./hooks/langfuse_key_alias_tag.py:/app/langfuse_key_alias_tag.py:ro
     mem_limit: 1536m       # 512m/1g → OOM (exit 137) на старте LiteLLM; выросло после подключения Langfuse-коллбэка
     depends_on:
       postgres:

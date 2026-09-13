@@ -24,7 +24,7 @@
 - ✅ Мультитенантность проверена: virtual key с `models=[gpt-4.1-mini]` получает отказ при попытке к модели вне списка.
 - ✅ Бэкапы: cron root ежедневно 03:00 → `backups/`, ротация 14, лог `/var/log/llm-gw-backup.log`. **Восстановление протестировано**.
 - ✅ RAGv2 переключён на шлюз (`http://192.168.3.203:4000/v1`, virtual key `ragv2`). Будущие клиенты: openclaw/DeepSeek-агент, боты, n8n.
-- ✅ Трейсинг в Langfuse подключён (`success_callback: ["langfuse"]` в `config/litellm_config.yaml`) — активируется, когда в `.env` появятся реальные `LANGFUSE_HOST/PUBLIC_KEY/SECRET_KEY` от развёрнутого self-hosted Langfuse (отдельный проект `../Langfuse`, свой LXC).
+- ✅ Трейсинг в Langfuse: проект `llm-gateway` (не RAGv2), `callbacks: ["langfuse_otel"]` (OTLP на `{LANGFUSE_HOST}/api/public/otel`) + хук `hooks/langfuse_key_alias_tag.py` (тег `user_api_key_alias:<alias>` в `metadata.tags` — yaml `langfuse_default_tags` OTEL не читает). Ключи графа RAGv2 шлюзом не использовать. Правка yaml — `docker compose restart litellm`; смена `.env` — `docker compose up -d litellm`.
 
 ## Архитектура
 
