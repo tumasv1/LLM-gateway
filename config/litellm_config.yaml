@@ -54,14 +54,11 @@ litellm_settings:
   callbacks:
     - prometheus
     - openwebui_presidio.proxy_handler_instance
-    - langfuse_key_alias_tag.proxy_handler_instance  # тег user_api_key_alias для OTEL (см. хук)
+    - langfuse_key_alias_tag.proxy_handler_instance  # короткий тег клиента + session/user OpenWebUI
+    - langfuse_otel_quiet.proxy_handler_instance  # не слать пустые GUARDRAIL/raw_gen_ai спаны
     - langfuse_otel
-  # кэш ответов в Redis — выключен; если включишь, можно вернуть тег cache_hit в langfuse_default_tags.
-  # автотеги на каждый трейс: алиас ключа (Ragv2/OpenClaw/...) — чтобы фильтровать
-  # трейсы по клиенту, включая будущих, без ручной настройки каждого ключа.
-  # cache_hit убран намеренно: кэш ответов сейчас выключен (см. cache ниже),
-  # поэтому тег всегда был "None"/"False" — чистый шум. Вернуть, когда включим cache.
-  langfuse_default_tags: ["user_api_key_alias"]
+  # langfuse_default_tags — только legacy callback, OTEL его не читает. Теги
+  # ставит хук: openclaw / openwebui / ragv2, без префикса user_api_key_alias:.
   # НЕ вешать автотег "User-Agent: ..." на каждый трейс — с litellm 1.73.0 он
   # добавляется по умолчанию и захламляет фильтр по тегам (сотни "User-Agent: OpenAI").
   disable_add_user_agent_to_request_tags: true
